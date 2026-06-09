@@ -1,0 +1,25 @@
+name: any2xinput-build
+
+on:
+  push:
+    paths:
+      - 'any2xinput/**'
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: any2xinput
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        submodules: true
+    - run: cmake -B build
+    - run: cmake --build build --config Release
+    - uses: actions/upload-artifact@v7
+      with:
+        name: any2xinput-artifact
+        path: any2xinput/build/Release/any2xinput.exe

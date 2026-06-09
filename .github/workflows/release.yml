@@ -1,0 +1,30 @@
+name: release
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags: 'r*'
+
+jobs:
+  dongle-build:
+    uses: ./.github/workflows/dongle-build.yml
+  any2xinput-build:
+    uses: ./.github/workflows/any2xinput-build.yml
+  basic_example-build:
+    uses: ./.github/workflows/basic_example-build.yml
+  steam_controller-build:
+    uses: ./.github/workflows/steam_controller-build.yml
+  create-release:
+    needs: [ dongle-build, any2xinput-build, basic_example-build, steam_controller-build ]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          merge-multiple: true
+          path: download
+      - uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda
+        with:
+          draft: true
+          files: download/*

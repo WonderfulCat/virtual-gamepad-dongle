@@ -1,0 +1,30 @@
+name: basic_example-build
+
+on:
+  push:
+    paths:
+      - 'basic_example/**'
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: basic_example
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.14'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+    - run: pyinstaller --onefile basic_example.py
+    - uses: actions/upload-artifact@v7
+      with:
+        name: basic_example-artifact
+        path: basic_example/dist/basic_example.exe

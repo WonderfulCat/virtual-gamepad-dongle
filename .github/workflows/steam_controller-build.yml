@@ -1,0 +1,30 @@
+name: steam_controller-build
+
+on:
+  push:
+    paths:
+      - 'steam_controller/**'
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: steam_controller
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.14'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+    - run: pyinstaller --onefile steam_controller.py
+    - uses: actions/upload-artifact@v7
+      with:
+        name: steam_controller-artifact
+        path: steam_controller/dist/steam_controller.exe
