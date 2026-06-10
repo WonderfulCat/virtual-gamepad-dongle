@@ -31,6 +31,6 @@ We have some example software that shows how the dongle can be used to send synt
 
 Pre-built executables are included in the [latest release](https://github.com/jfedor2/virtual-gamepad-dongle/releases/latest).
 
-* [any2xinput](any2xinput): a C++/SDL application that reads inputs from all connected controllers, merges them into one and sends them through the dongle, making them visible to apps using the XInput API. You can enable/disable individual controllers.
-* [steam_controller](steam_controller): a Python application that reads inputs from a connected Steam Controller and sends them through the dongle, letting you use the controller in non-Steam games. You could use any2xinput to achieve the same result, but with this rumble also works.
+* [any2xinput](any2xinput): a C++/SDL application that reads inputs from all connected controllers, merges them into one and sends them through the dongle, making them visible to apps using the XInput API. You can enable/disable individual controllers and remap buttons and axes. Rumble is optionally forwarded to the connected controllers.
+* [steam_controller](steam_controller): a Python application that reads inputs from a connected Steam Controller and sends them through the dongle, letting you use the controller in non-Steam games. You could use any2xinput to achieve the same result (and more) so this is more of a Python code sample.
 * [basic_example](basic_example): a very simple Python application that shows how to generate completely synthetic inputs.

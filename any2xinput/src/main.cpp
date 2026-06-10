@@ -7,8 +7,8 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <dbt.h>
 
+#include <dbt.h>
 #include <hidapi.h>
 
 #include <nlohmann/json.hpp>
@@ -37,52 +37,193 @@ struct ControllerState {
     int16_t left_stick_y = 0;
     int16_t right_stick_x = 0;
     int16_t right_stick_y = 0;
-    uint8_t left_trigger = 0;
-    uint8_t right_trigger = 0;
+    uint8_t l2 = 0;
+    uint8_t r2 = 0;
 
+    bool south = false;
+    bool east = false;
+    bool west = false;
+    bool north = false;
     bool dpad_up = false;
     bool dpad_down = false;
     bool dpad_left = false;
     bool dpad_right = false;
+    bool l1 = false;
+    bool r1 = false;
+    bool l3 = false;
+    bool r3 = false;
+    bool select = false;
     bool start = false;
-    bool back = false;
-    bool left_stick_click = false;
-    bool right_stick_click = false;
-    bool left_bumper = false;
-    bool right_bumper = false;
-    bool a = false;
-    bool b = false;
-    bool x = false;
-    bool y = false;
-    bool guide = false;
+    bool home = false;
+    bool misc1 = false;
+    bool touchpad = false;
+    bool misc2 = false;
+    bool r4 = false;
+    bool l4 = false;
+    bool r5 = false;
+    bool l5 = false;
 
     bool operator!=(const ControllerState& other) const {
         return left_stick_x != other.left_stick_x ||
                left_stick_y != other.left_stick_y ||
                right_stick_x != other.right_stick_x ||
                right_stick_y != other.right_stick_y ||
-               left_trigger != other.left_trigger ||
-               right_trigger != other.right_trigger ||
+               l2 != other.l2 ||
+               r2 != other.r2 ||
                dpad_up != other.dpad_up ||
                dpad_down != other.dpad_down ||
                dpad_left != other.dpad_left ||
                dpad_right != other.dpad_right ||
                start != other.start ||
-               back != other.back ||
-               left_stick_click != other.left_stick_click ||
-               right_stick_click != other.right_stick_click ||
-               left_bumper != other.left_bumper ||
-               right_bumper != other.right_bumper ||
-               a != other.a ||
-               b != other.b ||
-               x != other.x ||
-               y != other.y ||
-               guide != other.guide;
+               select != other.select ||
+               l3 != other.l3 ||
+               r3 != other.r3 ||
+               l1 != other.l1 ||
+               r1 != other.r1 ||
+               south != other.south ||
+               east != other.east ||
+               west != other.west ||
+               north != other.north ||
+               home != other.home ||
+               misc1 != other.misc1 ||
+               touchpad != other.touchpad ||
+               r4 != other.r4 ||
+               l4 != other.l4 ||
+               r5 != other.r5 ||
+               l5 != other.l5 ||
+               misc2 != other.misc2;
     }
 };
 
+enum class ButtonMap {
+    South,
+    East,
+    West,
+    North,
+    Home,
+    Select,
+    Start,
+    L3,
+    R3,
+    L1,
+    R1,
+    DpadUp,
+    DpadDown,
+    DpadLeft,
+    DpadRight,
+    Misc1,
+    Touchpad,
+    R4,
+    L4,
+    R5,
+    L5,
+    Misc2,
+    Nothing,
+    L2,
+    R2,
+    Count
+};
+
+const char* const InputButtonMapNames[] = {
+    "South", "East", "West", "North", "Home", "Select", "Start", "L3", "R3", "L1", "R1", "Up", "Down", "Left", "Right",
+    "Misc 1", "Touchpad", "R4", "L4", "R5", "L5", "Misc 2",
+    "Nothing"
+};
+
+const char* GetInputButtonLabel(SDL_Gamepad* gamepad, int idx) {
+    if (idx >= 0 && idx <= 3 && gamepad != nullptr) {
+        SDL_GamepadButton sdl_btn = static_cast<SDL_GamepadButton>(idx);
+        SDL_GamepadButtonLabel label = SDL_GetGamepadButtonLabel(gamepad, sdl_btn);
+        switch (label) {
+            case SDL_GAMEPAD_BUTTON_LABEL_A:
+                return "A";
+            case SDL_GAMEPAD_BUTTON_LABEL_B:
+                return "B";
+            case SDL_GAMEPAD_BUTTON_LABEL_X:
+                return "X";
+            case SDL_GAMEPAD_BUTTON_LABEL_Y:
+                return "Y";
+            case SDL_GAMEPAD_BUTTON_LABEL_CROSS:
+                return "Cross";
+            case SDL_GAMEPAD_BUTTON_LABEL_CIRCLE:
+                return "Circle";
+            case SDL_GAMEPAD_BUTTON_LABEL_SQUARE:
+                return "Square";
+            case SDL_GAMEPAD_BUTTON_LABEL_TRIANGLE:
+                return "Triangle";
+            default:
+                break;
+        }
+    }
+    return InputButtonMapNames[idx];
+}
+
+const char* const ButtonMapNames[] = {
+    "A", "B", "X", "Y", "Guide", "Back", "Start", "LSB", "RSB", "LB", "RB", "Up", "Down", "Left", "Right",
+    "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A",
+    "Nothing",
+    "LT", "RT"
+};
+
+const ButtonMap XinputValidOutputs[] = {
+    ButtonMap::South, ButtonMap::East, ButtonMap::West, ButtonMap::North,
+    ButtonMap::DpadLeft, ButtonMap::DpadRight, ButtonMap::DpadUp, ButtonMap::DpadDown,
+    ButtonMap::L1, ButtonMap::R1, ButtonMap::L2, ButtonMap::R2,
+    ButtonMap::L3, ButtonMap::R3,
+    ButtonMap::Select, ButtonMap::Start, ButtonMap::Home,
+    ButtonMap::Nothing
+};
+constexpr int NUM_VALID_OUTPUTS = sizeof(XinputValidOutputs) / sizeof(ButtonMap);
+
+const char* const InputTriggerMapNames[] = {
+    "L2", "R2", "Nothing"
+};
+
+enum class StickMap {
+    LeftStickX,
+    LeftStickY,
+    RightStickX,
+    RightStickY,
+    Nothing,
+    Count
+};
+const char* StickMapNames[] = {
+    "Left X", "Left Y", "Right X", "Right Y", "Nothing"
+};
+
+enum class TriggerMap {
+    L2,
+    R2,
+    Nothing,
+    Count
+};
+
+constexpr int NUM_BUTTONS = static_cast<int>(ButtonMap::Nothing);
+constexpr int NUM_TRIGGERS = static_cast<int>(TriggerMap::Nothing);
+constexpr int NUM_STICK_AXES = static_cast<int>(StickMap::Nothing);
+
+constexpr float TRIGGER_MAX = 255.0f;
+constexpr float STICK_DEADZONE = 8000.0f;
+constexpr float STICK_MAX = 32767.0f;
+
 struct ControllerSettings {
     bool enabled = true;
+    bool rumble = true;
+    ButtonMap btn_map[NUM_BUTTONS];
+    ButtonMap trigger_map[NUM_TRIGGERS];
+    StickMap stick_map[NUM_STICK_AXES];
+
+    ControllerSettings() {
+        for (int i = 0; i < NUM_BUTTONS; ++i) {
+            btn_map[i] = static_cast<ButtonMap>(i);
+        }
+        for (int i = 0; i < 2; ++i) {
+            trigger_map[i] = (i == 0) ? ButtonMap::L2 : ButtonMap::R2;
+        }
+        for (int i = 0; i < 4; ++i) {
+            stick_map[i] = static_cast<StickMap>(i);
+        }
+    }
 };
 
 struct ControllerInfo {
@@ -90,12 +231,23 @@ struct ControllerInfo {
     std::string name;
     std::string key;
     bool enabled;
+    bool rumble;
+    bool ui_expanded = false;
     ControllerState current_state;
+
+    ButtonMap btn_map[NUM_BUTTONS];
+    ButtonMap trigger_map[NUM_TRIGGERS];
+    StickMap stick_map[NUM_STICK_AXES];
+
+    bool raw_btns[NUM_BUTTONS] = { 0 };
+    uint8_t raw_trigs[NUM_TRIGGERS] = { 0 };
+    int16_t raw_sticks[NUM_STICK_AXES] = { 0 };
 };
 
 std::atomic<bool> is_running{ true };
 std::map<SDL_JoystickID, ControllerInfo> controllers;
 std::map<std::string, ControllerSettings> controller_settings;
+bool global_rumble_enabled = true;
 hid_device* dongle = nullptr;
 ControllerState last_sent_state;
 
@@ -120,22 +272,54 @@ std::string GetControllerKey(SDL_Gamepad* gc) {
     }
 }
 
-void LoadSettings() {
+std::string GetSettingsFilePath() {
     char* prefPath = SDL_GetPrefPath("any2xinput", "any2xinput");
     if (!prefPath) {
-        return;
+        return "";
     }
     std::string path = std::string(prefPath) + "settings.json";
     SDL_free(prefPath);
+    return path;
+}
+
+void LoadSettings() {
+    std::string path = GetSettingsFilePath();
+    if (path.empty()) {
+        return;
+    }
 
     try {
         std::ifstream file(path);
         if (file.is_open()) {
             nlohmann::json j;
             file >> j;
+            if (j.contains("global_rumble_enabled") && j["global_rumble_enabled"].is_boolean()) {
+                global_rumble_enabled = j["global_rumble_enabled"].get<bool>();
+            }
             for (auto& [key, value] : j.items()) {
+                if (key == "global_rumble_enabled") {
+                    continue;
+                }
                 if (value.is_object() && value.contains("enabled") && value["enabled"].is_boolean()) {
                     controller_settings[key].enabled = value["enabled"].get<bool>();
+                }
+                if (value.is_object() && value.contains("rumble") && value["rumble"].is_boolean()) {
+                    controller_settings[key].rumble = value["rumble"].get<bool>();
+                }
+                if (value.is_object() && value.contains("btn_map") && value["btn_map"].is_array()) {
+                    for (int i = 0; i < NUM_BUTTONS && i < value["btn_map"].size(); ++i) {
+                        controller_settings[key].btn_map[i] = static_cast<ButtonMap>(value["btn_map"][i].get<int>());
+                    }
+                }
+                if (value.is_object() && value.contains("trigger_btn_map") && value["trigger_btn_map"].is_array()) {
+                    for (int i = 0; i < 2 && i < value["trigger_btn_map"].size(); ++i) {
+                        controller_settings[key].trigger_map[i] = static_cast<ButtonMap>(value["trigger_btn_map"][i].get<int>());
+                    }
+                }
+                if (value.is_object() && value.contains("stick_map") && value["stick_map"].is_array()) {
+                    for (int i = 0; i < 4 && i < value["stick_map"].size(); ++i) {
+                        controller_settings[key].stick_map[i] = static_cast<StickMap>(value["stick_map"][i].get<int>());
+                    }
                 }
             }
         }
@@ -145,17 +329,25 @@ void LoadSettings() {
 }
 
 void SaveSettings() {
-    char* prefPath = SDL_GetPrefPath("any2xinput", "any2xinput");
-    if (!prefPath) {
+    std::string path = GetSettingsFilePath();
+    if (path.empty()) {
         return;
     }
-    std::string path = std::string(prefPath) + "settings.json";
-    SDL_free(prefPath);
 
     try {
         nlohmann::json j = nlohmann::json::object();
+        j["global_rumble_enabled"] = global_rumble_enabled;
         for (auto& pair : controller_settings) {
-            j[pair.first] = { { "enabled", pair.second.enabled } };
+            j[pair.first] = { { "enabled", pair.second.enabled }, { "rumble", pair.second.rumble } };
+            for (int i = 0; i < NUM_BUTTONS; ++i) {
+                j[pair.first]["btn_map"].push_back(static_cast<int>(pair.second.btn_map[i]));
+            }
+            for (int i = 0; i < 2; ++i) {
+                j[pair.first]["trigger_btn_map"].push_back(static_cast<int>(pair.second.trigger_map[i]));
+            }
+            for (int i = 0; i < 4; ++i) {
+                j[pair.first]["stick_map"].push_back(static_cast<int>(pair.second.stick_map[i]));
+            }
         }
 
         std::ofstream file(path);
@@ -207,7 +399,25 @@ void process_dongle_input() {
     unsigned char buf[64];
     int res;
     while ((res = hid_read(dongle, buf, sizeof(buf))) > 0) {
-        // discard for now
+        if (res == 8) {
+            if (buf[0] == 0x00 && buf[1] == 0x08) {
+                uint8_t left_motor = buf[3];
+                uint8_t right_motor = buf[4];
+
+                uint16_t low_freq = (left_motor << 8) | left_motor;
+                uint16_t high_freq = (right_motor << 8) | right_motor;
+
+                for (auto& pair : controllers) {
+                    if (pair.second.gamepad) {
+                        if (global_rumble_enabled && pair.second.enabled && pair.second.rumble) {
+                            SDL_RumbleGamepad(pair.second.gamepad, low_freq, high_freq, 0xFFFF);
+                        } else {
+                            SDL_RumbleGamepad(pair.second.gamepad, 0, 0, 0);
+                        }
+                    }
+                }
+            }
+        }
     }
     if (res < 0) {
         hid_close(dongle);
@@ -239,40 +449,40 @@ void send_xusb_report(const ControllerState& state) {
     if (state.start) {
         report[2] |= 0x10;
     }
-    if (state.back) {
+    if (state.select) {
         report[2] |= 0x20;
     }
-    if (state.left_stick_click) {
+    if (state.l3) {
         report[2] |= 0x40;
     }
-    if (state.right_stick_click) {
+    if (state.r3) {
         report[2] |= 0x80;
     }
 
-    if (state.left_bumper) {
+    if (state.l1) {
         report[3] |= 0x01;
     }
-    if (state.right_bumper) {
+    if (state.r1) {
         report[3] |= 0x02;
     }
-    if (state.guide) {
+    if (state.home) {
         report[3] |= 0x04;
     }
-    if (state.a) {
+    if (state.south) {
         report[3] |= 0x10;
     }
-    if (state.b) {
+    if (state.east) {
         report[3] |= 0x20;
     }
-    if (state.x) {
+    if (state.west) {
         report[3] |= 0x40;
     }
-    if (state.y) {
+    if (state.north) {
         report[3] |= 0x80;
     }
 
-    report[4] = state.left_trigger;
-    report[5] = state.right_trigger;
+    report[4] = state.l2;
+    report[5] = state.r2;
 
     auto set_le16 = [](unsigned char* ptr, int16_t val) {
         ptr[0] = val & 0xFF;
@@ -329,59 +539,211 @@ bool poll_and_fuse() {
         SDL_Gamepad* gc = info.gamepad;
         ControllerState c_state;
 
-        c_state.a = SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_SOUTH);
-        c_state.b = SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_EAST);
-        c_state.x = SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_WEST);
-        c_state.y = SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_NORTH);
-        c_state.guide = SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_GUIDE);
-        c_state.back = SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_BACK);
-        c_state.start = SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_START);
-        c_state.left_stick_click = SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_LEFT_STICK);
-        c_state.right_stick_click = SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_RIGHT_STICK);
-        c_state.left_bumper = SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER);
-        c_state.right_bumper = SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER);
-        c_state.dpad_up = SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_DPAD_UP);
-        c_state.dpad_down = SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_DPAD_DOWN);
-        c_state.dpad_left = SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_DPAD_LEFT);
-        c_state.dpad_right = SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_DPAD_RIGHT);
+        bool physical_btns[NUM_BUTTONS] = {
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_SOUTH),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_EAST),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_WEST),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_NORTH),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_GUIDE),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_BACK),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_START),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_LEFT_STICK),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_RIGHT_STICK),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_DPAD_UP),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_DPAD_DOWN),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_DPAD_LEFT),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_DPAD_RIGHT),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_MISC1),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_TOUCHPAD),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_LEFT_PADDLE1),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_LEFT_PADDLE2),
+            SDL_GetGamepadButton(gc, SDL_GAMEPAD_BUTTON_MISC2)
+        };
 
-        int16_t l_trig = SDL_GetGamepadAxis(gc, SDL_GAMEPAD_AXIS_LEFT_TRIGGER);
-        int16_t r_trig = SDL_GetGamepadAxis(gc, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER);
-        c_state.left_trigger = (uint8_t) ((l_trig * 255) / 32767);
-        c_state.right_trigger = (uint8_t) ((r_trig * 255) / 32767);
+        auto apply_button_mapping = [&](ButtonMap mapped) {
+            switch (mapped) {
+                case ButtonMap::South:
+                    c_state.south = true;
+                    break;
+                case ButtonMap::East:
+                    c_state.east = true;
+                    break;
+                case ButtonMap::West:
+                    c_state.west = true;
+                    break;
+                case ButtonMap::North:
+                    c_state.north = true;
+                    break;
+                case ButtonMap::Home:
+                    c_state.home = true;
+                    break;
+                case ButtonMap::Select:
+                    c_state.select = true;
+                    break;
+                case ButtonMap::Start:
+                    c_state.start = true;
+                    break;
+                case ButtonMap::L3:
+                    c_state.l3 = true;
+                    break;
+                case ButtonMap::R3:
+                    c_state.r3 = true;
+                    break;
+                case ButtonMap::L1:
+                    c_state.l1 = true;
+                    break;
+                case ButtonMap::R1:
+                    c_state.r1 = true;
+                    break;
+                case ButtonMap::DpadUp:
+                    c_state.dpad_up = true;
+                    break;
+                case ButtonMap::DpadDown:
+                    c_state.dpad_down = true;
+                    break;
+                case ButtonMap::DpadLeft:
+                    c_state.dpad_left = true;
+                    break;
+                case ButtonMap::DpadRight:
+                    c_state.dpad_right = true;
+                    break;
+                case ButtonMap::Misc1:
+                    c_state.misc1 = true;
+                    break;
+                case ButtonMap::Touchpad:
+                    c_state.touchpad = true;
+                    break;
+                case ButtonMap::R4:
+                    c_state.r4 = true;
+                    break;
+                case ButtonMap::L4:
+                    c_state.l4 = true;
+                    break;
+                case ButtonMap::R5:
+                    c_state.r5 = true;
+                    break;
+                case ButtonMap::L5:
+                    c_state.l5 = true;
+                    break;
+                case ButtonMap::Misc2:
+                    c_state.misc2 = true;
+                    break;
+                case ButtonMap::L2:
+                    c_state.l2 = 255;
+                    break;
+                case ButtonMap::R2:
+                    c_state.r2 = 255;
+                    break;
+                case ButtonMap::Nothing:
+                case ButtonMap::Count:
+                    break;
+            }
+        };
 
-        c_state.left_stick_x = SDL_GetGamepadAxis(gc, SDL_GAMEPAD_AXIS_LEFTX);
-        c_state.left_stick_y = SDL_GetGamepadAxis(gc, SDL_GAMEPAD_AXIS_LEFTY);
-        c_state.right_stick_x = SDL_GetGamepadAxis(gc, SDL_GAMEPAD_AXIS_RIGHTX);
-        c_state.right_stick_y = SDL_GetGamepadAxis(gc, SDL_GAMEPAD_AXIS_RIGHTY);
+        for (int i = 0; i < NUM_BUTTONS; ++i) {
+            if (physical_btns[i]) {
+                apply_button_mapping(info.btn_map[i]);
+            }
+        }
+
+        uint8_t physical_trigs[2] = {
+            (uint8_t) ((SDL_GetGamepadAxis(gc, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) * 255) / 32767),
+            (uint8_t) ((SDL_GetGamepadAxis(gc, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) * 255) / 32767)
+        };
+
+        for (int i = 0; i < 2; ++i) {
+            ButtonMap mapped = info.trigger_map[i];
+            if (mapped == ButtonMap::L2) {
+                c_state.l2 = (std::max)(c_state.l2, physical_trigs[i]);
+            } else if (mapped == ButtonMap::R2) {
+                c_state.r2 = (std::max)(c_state.r2, physical_trigs[i]);
+            } else if (physical_trigs[i] > 64) {
+                apply_button_mapping(mapped);
+            }
+        }
+
+        int16_t physical_sticks[4] = {
+            SDL_GetGamepadAxis(gc, SDL_GAMEPAD_AXIS_LEFTX),
+            SDL_GetGamepadAxis(gc, SDL_GAMEPAD_AXIS_LEFTY),
+            SDL_GetGamepadAxis(gc, SDL_GAMEPAD_AXIS_RIGHTX),
+            SDL_GetGamepadAxis(gc, SDL_GAMEPAD_AXIS_RIGHTY)
+        };
+
+        int32_t temp_lsx = 0, temp_lsy = 0, temp_rsx = 0, temp_rsy = 0;
+
+        for (int i = 0; i < 4; ++i) {
+            switch (info.stick_map[i]) {
+                case StickMap::LeftStickX:
+                    temp_lsx += physical_sticks[i];
+                    break;
+                case StickMap::LeftStickY:
+                    temp_lsy += physical_sticks[i];
+                    break;
+                case StickMap::RightStickX:
+                    temp_rsx += physical_sticks[i];
+                    break;
+                case StickMap::RightStickY:
+                    temp_rsy += physical_sticks[i];
+                    break;
+                case StickMap::Nothing:
+                case StickMap::Count:
+                    break;
+            }
+        }
+
+        c_state.left_stick_x = clamp_axis(temp_lsx);
+        c_state.left_stick_y = clamp_axis(temp_lsy);
+        c_state.right_stick_x = clamp_axis(temp_rsx);
+        c_state.right_stick_y = clamp_axis(temp_rsy);
 
         info.current_state = c_state;
+
+        for (int i = 0; i < NUM_BUTTONS; ++i) {
+            info.raw_btns[i] = physical_btns[i];
+        }
+        for (int i = 0; i < 2; ++i) {
+            info.raw_trigs[i] = physical_trigs[i];
+        }
+        for (int i = 0; i < 4; ++i) {
+            info.raw_sticks[i] = physical_sticks[i];
+        }
 
         if (!info.enabled) {
             continue;
         }
 
-        total_state.a |= c_state.a;
-        total_state.b |= c_state.b;
-        total_state.x |= c_state.x;
-        total_state.y |= c_state.y;
-        total_state.guide |= c_state.guide;
-        total_state.back |= c_state.back;
+        total_state.south |= c_state.south;
+        total_state.east |= c_state.east;
+        total_state.west |= c_state.west;
+        total_state.north |= c_state.north;
+        total_state.home |= c_state.home;
+        total_state.select |= c_state.select;
         total_state.start |= c_state.start;
-        total_state.left_stick_click |= c_state.left_stick_click;
-        total_state.right_stick_click |= c_state.right_stick_click;
-        total_state.left_bumper |= c_state.left_bumper;
-        total_state.right_bumper |= c_state.right_bumper;
+        total_state.l3 |= c_state.l3;
+        total_state.r3 |= c_state.r3;
+        total_state.l1 |= c_state.l1;
+        total_state.r1 |= c_state.r1;
         total_state.dpad_up |= c_state.dpad_up;
         total_state.dpad_down |= c_state.dpad_down;
         total_state.dpad_left |= c_state.dpad_left;
         total_state.dpad_right |= c_state.dpad_right;
+        total_state.misc1 |= c_state.misc1;
+        total_state.touchpad |= c_state.touchpad;
+        total_state.r4 |= c_state.r4;
+        total_state.l4 |= c_state.l4;
+        total_state.r5 |= c_state.r5;
+        total_state.l5 |= c_state.l5;
+        total_state.misc2 |= c_state.misc2;
 
-        if (c_state.left_trigger > total_state.left_trigger) {
-            total_state.left_trigger = c_state.left_trigger;
+        if (c_state.l2 > total_state.l2) {
+            total_state.l2 = c_state.l2;
         }
-        if (c_state.right_trigger > total_state.right_trigger) {
-            total_state.right_trigger = c_state.right_trigger;
+        if (c_state.r2 > total_state.r2) {
+            total_state.r2 = c_state.r2;
         }
 
         lsx += c_state.left_stick_x;
@@ -576,13 +938,58 @@ int main(int argc, char* argv[]) {
                     }
                     const char* name = SDL_GetGamepadName(gc);
                     std::string key = GetControllerKey(gc);
-                    bool enabled = true;
+                    ControllerInfo new_info;
+                    new_info.gamepad = gc;
+                    new_info.name = name ? name : "Unknown Controller";
+                    new_info.key = key;
+                    new_info.enabled = true;
+                    new_info.rumble = true;
+                    new_info.ui_expanded = false;
+                    new_info.current_state = ControllerState();
                     if (controller_settings.count(key)) {
-                        enabled = controller_settings[key].enabled;
+                        new_info.enabled = controller_settings[key].enabled;
+                        new_info.rumble = controller_settings[key].rumble;
+                        for (int i = 0; i < NUM_BUTTONS; ++i) {
+                            new_info.btn_map[i] = controller_settings[key].btn_map[i];
+                        }
+                        for (int i = 0; i < 2; ++i) {
+                            new_info.trigger_map[i] = controller_settings[key].trigger_map[i];
+                        }
+                        for (int i = 0; i < 4; ++i) {
+                            new_info.stick_map[i] = controller_settings[key].stick_map[i];
+                        }
                     } else {
                         controller_settings[key].enabled = true;
+                        controller_settings[key].rumble = true;
+                        new_info.enabled = true;
+                        new_info.rumble = true;
+                        for (int i = 0; i < NUM_BUTTONS; ++i) {
+                            new_info.btn_map[i] = static_cast<ButtonMap>(i);
+                            controller_settings[key].btn_map[i] = static_cast<ButtonMap>(i);
+                        }
+                        for (int i = 0; i < 2; ++i) {
+                            new_info.trigger_map[i] = (i == 0) ? ButtonMap::L2 : ButtonMap::R2;
+                            controller_settings[key].trigger_map[i] = (i == 0) ? ButtonMap::L2 : ButtonMap::R2;
+                        }
+                        for (int i = 0; i < 4; ++i) {
+                            new_info.stick_map[i] = static_cast<StickMap>(i);
+                            controller_settings[key].stick_map[i] = static_cast<StickMap>(i);
+                        }
+                        for (int i = 0; i < NUM_BUTTONS; ++i) {
+                            bool is_valid = false;
+                            for (int k = 0; k < NUM_VALID_OUTPUTS; ++k) {
+                                if (new_info.btn_map[i] == XinputValidOutputs[k]) {
+                                    is_valid = true;
+                                    break;
+                                }
+                            }
+                            if (!is_valid) {
+                                new_info.btn_map[i] = ButtonMap::Nothing;
+                                controller_settings[key].btn_map[i] = ButtonMap::Nothing;
+                            }
+                        }
                     }
-                    controllers[jid] = { gc, name ? name : "Unknown Controller", key, enabled, ControllerState() };
+                    controllers[jid] = new_info;
                 }
             } else if (event.type == SDL_EVENT_GAMEPAD_REMOVED) {
                 SDL_JoystickID jid = event.gdevice.which;
@@ -637,11 +1044,19 @@ int main(int argc, char* argv[]) {
                     ImGui::TextColored(ImVec4(1, 0, 0, 1), "Dongle: not detected");
                 }
 
+                ImGui::Checkbox("Rumble", &global_rumble_enabled);
+
                 ImGui::Separator();
                 ImGui::Text("Connected controllers:");
                 for (auto& pair : controllers) {
                     auto& ctrl = pair.second;
                     std::string label = ctrl.name + "##" + std::to_string(pair.first);
+
+                    if (ImGui::ArrowButton(("##arrow" + std::to_string(pair.first)).c_str(), ctrl.ui_expanded ? ImGuiDir_Down : ImGuiDir_Right)) {
+                        ctrl.ui_expanded = !ctrl.ui_expanded;
+                    }
+                    ImGui::SameLine();
+                    float checkbox_x = ImGui::GetCursorPosX();
                     if (ImGui::Checkbox(label.c_str(), &ctrl.enabled)) {
                         controller_settings[ctrl.key].enabled = ctrl.enabled;
                     }
@@ -651,96 +1066,296 @@ int main(int argc, char* argv[]) {
                         ImGui::SetTooltip("%s", path ? path : "Unknown");
                     }
 
-                    // Total width is exactly 356 pixels
-                    float start_x = ImGui::GetWindowContentRegionMax().x - 356.0f;
-                    ImGui::SameLine(start_x);
+                    if (!ctrl.ui_expanded) {
+                        // Total width is exactly 356 pixels
+                        float start_x = ImGui::GetWindowContentRegionMax().x - 356.0f;
+                        ImGui::SameLine(start_x);
 
-                    float sz = 10.0f;
-                    float spacing = 2.0f;
-                    float offset_y = 6.0f;
+                        float sz = 10.0f;
+                        float spacing = 2.0f;
+                        float offset_y = 6.0f;
 
-                    auto draw_btn = [&](bool pressed) {
-                        ImVec2 p = ImGui::GetCursorScreenPos();
-                        p.y += offset_y;
-                        ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + sz, p.y + sz), pressed ? IM_COL32(255, 255, 255, 255) : IM_COL32(100, 100, 100, 255), 2.0f);
-                        ImGui::Dummy(ImVec2(sz, sz));
-                        ImGui::SameLine(0, spacing);
-                    };
+                        auto draw_btn = [&](bool pressed) {
+                            ImVec2 p = ImGui::GetCursorScreenPos();
+                            p.y += offset_y;
+                            ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + sz, p.y + sz), pressed ? IM_COL32(255, 255, 255, 255) : IM_COL32(100, 100, 100, 255), 2.0f);
+                            ImGui::Dummy(ImVec2(sz, sz));
+                            ImGui::SameLine(0, spacing);
+                        };
 
-                    auto draw_axis = [&](float fraction, float width) {
-                        ImVec2 p = ImGui::GetCursorScreenPos();
-                        p.y += offset_y;
-                        ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + width, p.y + sz), IM_COL32(50, 50, 50, 255), 2.0f);
-                        if (fraction > 0.0f) {
-                            ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + (width * fraction), p.y + sz), IM_COL32(200, 200, 200, 255), 2.0f);
+                        auto draw_axis = [&](float fraction, float width) {
+                            ImVec2 p = ImGui::GetCursorScreenPos();
+                            p.y += offset_y;
+                            ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + width, p.y + sz), IM_COL32(50, 50, 50, 255), 2.0f);
+                            if (fraction > 0.0f) {
+                                ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + (width * fraction), p.y + sz), IM_COL32(200, 200, 200, 255), 2.0f);
+                            }
+                            ImGui::Dummy(ImVec2(width, sz));
+                            ImGui::SameLine(0, spacing);
+                        };
+
+                        auto draw_axis_centered = [&](float fraction, float width) {
+                            ImVec2 p = ImGui::GetCursorScreenPos();
+                            p.y += offset_y;
+                            ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + width, p.y + sz), IM_COL32(50, 50, 50, 255), 2.0f);
+
+                            float center = p.x + width / 2.0f;
+                            float end = p.x + (width * fraction);
+                            if (end < center) {
+                                ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(end, p.y), ImVec2(center, p.y + sz), IM_COL32(200, 200, 200, 255), 2.0f);
+                            } else {
+                                ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(center, p.y), ImVec2(end, p.y + sz), IM_COL32(200, 200, 200, 255), 2.0f);
+                            }
+
+                            ImGui::GetWindowDrawList()->AddLine(ImVec2(center, p.y), ImVec2(center, p.y + sz), IM_COL32(255, 50, 50, 255));
+
+                            ImGui::Dummy(ImVec2(width, sz));
+                            ImGui::SameLine(0, spacing);
+                        };
+
+                        // Face Buttons
+                        draw_btn(ctrl.raw_btns[static_cast<int>(ButtonMap::South)]);
+                        draw_btn(ctrl.raw_btns[static_cast<int>(ButtonMap::East)]);
+                        draw_btn(ctrl.raw_btns[static_cast<int>(ButtonMap::West)]);
+                        draw_btn(ctrl.raw_btns[static_cast<int>(ButtonMap::North)]);
+                        ImGui::SameLine(0, 4.0f);
+                        // D-Pad
+                        draw_btn(ctrl.raw_btns[static_cast<int>(ButtonMap::DpadLeft)]);
+                        draw_btn(ctrl.raw_btns[static_cast<int>(ButtonMap::DpadRight)]);
+                        draw_btn(ctrl.raw_btns[static_cast<int>(ButtonMap::DpadUp)]);
+                        draw_btn(ctrl.raw_btns[static_cast<int>(ButtonMap::DpadDown)]);
+                        ImGui::SameLine(0, 4.0f);
+                        // Bumpers & Stick Clicks (L1, R1, L3, R3)
+                        draw_btn(ctrl.raw_btns[static_cast<int>(ButtonMap::L1)]);
+                        draw_btn(ctrl.raw_btns[static_cast<int>(ButtonMap::R1)]);
+                        draw_btn(ctrl.raw_btns[static_cast<int>(ButtonMap::L3)]);
+                        draw_btn(ctrl.raw_btns[static_cast<int>(ButtonMap::R3)]);
+                        ImGui::SameLine(0, 4.0f);
+                        // System
+                        draw_btn(ctrl.raw_btns[static_cast<int>(ButtonMap::Select)]);
+                        draw_btn(ctrl.raw_btns[static_cast<int>(ButtonMap::Home)]);
+                        draw_btn(ctrl.raw_btns[static_cast<int>(ButtonMap::Start)]);
+
+                        ImGui::SameLine(0, 8.0f);
+
+                        // Triggers
+                        draw_axis(ctrl.raw_trigs[static_cast<int>(TriggerMap::L2)] / TRIGGER_MAX, 20.0f);
+                        draw_axis(ctrl.raw_trigs[static_cast<int>(TriggerMap::R2)] / TRIGGER_MAX, 20.0f);
+
+                        ImGui::SameLine(0, 4.0f);
+
+                        // Left Stick
+                        draw_axis_centered((ctrl.raw_sticks[static_cast<int>(StickMap::LeftStickX)] + 32768.0f) / 65535.0f, 24.0f);
+                        draw_axis_centered((ctrl.raw_sticks[static_cast<int>(StickMap::LeftStickY)] + 32768.0f) / 65535.0f, 24.0f);
+
+                        ImGui::SameLine(0, 4.0f);
+
+                        // Right Stick
+                        draw_axis_centered((ctrl.raw_sticks[static_cast<int>(StickMap::RightStickX)] + 32768.0f) / 65535.0f, 24.0f);
+                        draw_axis_centered((ctrl.raw_sticks[static_cast<int>(StickMap::RightStickY)] + 32768.0f) / 65535.0f, 24.0f);
+
+                        ImGui::NewLine();
+                    }
+
+                    if (ctrl.ui_expanded) {
+                        float indent_val = checkbox_x - ImGui::GetCursorPosX();
+                        ImGui::Indent(indent_val);
+
+                        if (ImGui::Checkbox(("Rumble##rumble" + std::to_string(pair.first)).c_str(), &ctrl.rumble)) {
+                            controller_settings[ctrl.key].rumble = ctrl.rumble;
                         }
-                        ImGui::Dummy(ImVec2(width, sz));
-                        ImGui::SameLine(0, spacing);
-                    };
 
-                    auto draw_axis_centered = [&](float fraction, float width) {
-                        ImVec2 p = ImGui::GetCursorScreenPos();
-                        p.y += offset_y;
-                        ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + width, p.y + sz), IM_COL32(50, 50, 50, 255), 2.0f);
-
-                        float center = p.x + width / 2.0f;
-                        float end = p.x + (width * fraction);
-                        if (end < center) {
-                            ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(end, p.y), ImVec2(center, p.y + sz), IM_COL32(200, 200, 200, 255), 2.0f);
-                        } else {
-                            ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(center, p.y), ImVec2(end, p.y + sz), IM_COL32(200, 200, 200, 255), 2.0f);
+                        if (ImGui::Button(("Reset mapping##reset_" + std::to_string(pair.first)).c_str())) {
+                            for (int i = 0; i < NUM_BUTTONS; ++i) {
+                                ctrl.btn_map[i] = static_cast<ButtonMap>(i);
+                                controller_settings[ctrl.key].btn_map[i] = static_cast<ButtonMap>(i);
+                            }
+                            for (int i = 0; i < NUM_BUTTONS; ++i) {
+                                bool is_valid = false;
+                                for (int k = 0; k < NUM_VALID_OUTPUTS; ++k) {
+                                    if (ctrl.btn_map[i] == XinputValidOutputs[k]) {
+                                        is_valid = true;
+                                        break;
+                                    }
+                                }
+                                if (!is_valid) {
+                                    ctrl.btn_map[i] = ButtonMap::Nothing;
+                                    controller_settings[ctrl.key].btn_map[i] = ButtonMap::Nothing;
+                                }
+                            }
+                            for (int i = 0; i < 2; ++i) {
+                                ctrl.trigger_map[i] = (i == 0) ? ButtonMap::L2 : ButtonMap::R2;
+                                controller_settings[ctrl.key].trigger_map[i] = (i == 0) ? ButtonMap::L2 : ButtonMap::R2;
+                            }
+                            for (int i = 0; i < 4; ++i) {
+                                ctrl.stick_map[i] = static_cast<StickMap>(i);
+                                controller_settings[ctrl.key].stick_map[i] = static_cast<StickMap>(i);
+                            }
                         }
 
-                        ImGui::GetWindowDrawList()->AddLine(ImVec2(center, p.y), ImVec2(center, p.y + sz), IM_COL32(255, 50, 50, 255));
+                        auto DrawComboBtn = [&](const char* label, int i) {
+                            if (ImGui::BeginCombo((std::string("##combo_btn_") + std::to_string(i) + "_" + std::to_string(pair.first)).c_str(), ButtonMapNames[static_cast<int>(ctrl.btn_map[i])])) {
+                                for (int n = 0; n < NUM_VALID_OUTPUTS; n++) {
+                                    int map_idx = static_cast<int>(XinputValidOutputs[n]);
+                                    bool is_selected = (static_cast<int>(ctrl.btn_map[i]) == map_idx);
+                                    if (ImGui::Selectable(ButtonMapNames[map_idx], is_selected)) {
+                                        ctrl.btn_map[i] = XinputValidOutputs[n];
+                                        controller_settings[ctrl.key].btn_map[i] = ctrl.btn_map[i];
+                                    }
+                                    if (is_selected) {
+                                        ImGui::SetItemDefaultFocus();
+                                    }
+                                }
+                                ImGui::EndCombo();
+                            }
+                        };
 
-                        ImGui::Dummy(ImVec2(width, sz));
-                        ImGui::SameLine(0, spacing);
-                    };
+                        auto DrawComboTrig = [&](const char* label, int i) {
+                            if (ImGui::BeginCombo((std::string("##combo_trig_") + std::to_string(i) + "_" + std::to_string(pair.first)).c_str(), ButtonMapNames[static_cast<int>(ctrl.trigger_map[i])])) {
+                                for (int n = 0; n < NUM_VALID_OUTPUTS; n++) {
+                                    int map_idx = static_cast<int>(XinputValidOutputs[n]);
+                                    bool is_selected = (static_cast<int>(ctrl.trigger_map[i]) == map_idx);
+                                    if (ImGui::Selectable(ButtonMapNames[map_idx], is_selected)) {
+                                        ctrl.trigger_map[i] = XinputValidOutputs[n];
+                                        controller_settings[ctrl.key].trigger_map[i] = ctrl.trigger_map[i];
+                                    }
+                                    if (is_selected) {
+                                        ImGui::SetItemDefaultFocus();
+                                    }
+                                }
+                                ImGui::EndCombo();
+                            }
+                        };
 
-                    const ControllerState& s = ctrl.current_state;
+                        auto DrawComboStick = [&](const char* label, int i) {
+                            if (ImGui::BeginCombo((std::string("##combo_stick_") + std::to_string(i) + "_" + std::to_string(pair.first)).c_str(), StickMapNames[static_cast<int>(ctrl.stick_map[i])])) {
+                                for (int n = 0; n < (int) StickMap::Count; n++) {
+                                    bool is_selected = (static_cast<int>(ctrl.stick_map[i]) == n);
+                                    if (ImGui::Selectable(StickMapNames[n], is_selected)) {
+                                        ctrl.stick_map[i] = static_cast<StickMap>(n);
+                                        controller_settings[ctrl.key].stick_map[i] = ctrl.stick_map[i];
+                                    }
+                                    if (is_selected) {
+                                        ImGui::SetItemDefaultFocus();
+                                    }
+                                }
+                                ImGui::EndCombo();
+                            }
+                        };
 
-                    // Face Buttons
-                    draw_btn(s.a);
-                    draw_btn(s.b);
-                    draw_btn(s.x);
-                    draw_btn(s.y);
-                    ImGui::SameLine(0, 4.0f);
-                    // D-Pad
-                    draw_btn(s.dpad_left);
-                    draw_btn(s.dpad_right);
-                    draw_btn(s.dpad_up);
-                    draw_btn(s.dpad_down);
-                    ImGui::SameLine(0, 4.0f);
-                    // Bumpers & Stick Clicks (L1, R1, L3, R3)
-                    draw_btn(s.left_bumper);
-                    draw_btn(s.right_bumper);
-                    draw_btn(s.left_stick_click);
-                    draw_btn(s.right_stick_click);
-                    ImGui::SameLine(0, 4.0f);
-                    // System
-                    draw_btn(s.back);
-                    draw_btn(s.guide);
-                    draw_btn(s.start);
+                        auto DrawRightAlignedLabel = [](const char* text, float intensity) {
+                            ImGui::AlignTextToFramePadding();
+                            float width = ImGui::CalcTextSize(text).x;
+                            float avail = ImGui::GetContentRegionAvail().x;
+                            float pad = (avail > width) ? (avail - width) : 0.0f;
+                            float pos_x = ImGui::GetCursorPosX() + pad;
 
-                    ImGui::SameLine(0, 8.0f);
+                            if (intensity > 0.0f) {
+                                intensity = (std::min)(1.0f, intensity);
+                                ImU32 bg_col = ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, intensity));
+                                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, bg_col);
 
-                    // Triggers
-                    draw_axis(s.left_trigger / 255.0f, 20.0f);
-                    draw_axis(s.right_trigger / 255.0f, 20.0f);
+                                ImVec4 text_color = ImVec4(1.0f - intensity, 1.0f - intensity, 1.0f - intensity, 1.0f);
+                                ImGui::PushStyleColor(ImGuiCol_Text, text_color);
+                            }
 
-                    ImGui::SameLine(0, 4.0f);
+                            ImGui::SetCursorPosX(pos_x);
+                            ImGui::Text("%s", text);
 
-                    // Left Stick
-                    draw_axis_centered((s.left_stick_x + 32768.0f) / 65535.0f, 24.0f);
-                    draw_axis_centered((s.left_stick_y + 32768.0f) / 65535.0f, 24.0f);
+                            if (intensity > 0.0f) {
+                                ImGui::PopStyleColor();
+                            }
+                        };
 
-                    ImGui::SameLine(0, 4.0f);
+                        if (ImGui::BeginTable(("remapping_btns_" + std::to_string(pair.first)).c_str(), 8)) {
+                            std::vector<ButtonMap> btn_layout = {
+                                ButtonMap::South, ButtonMap::East, ButtonMap::West, ButtonMap::North,
+                                ButtonMap::DpadLeft, ButtonMap::DpadRight, ButtonMap::DpadUp, ButtonMap::DpadDown,
+                                ButtonMap::L1, ButtonMap::R1, ButtonMap::L2, ButtonMap::R2,
+                                ButtonMap::L3, ButtonMap::R3, ButtonMap::Select, ButtonMap::Start
+                            };
 
-                    // Right Stick
-                    draw_axis_centered((s.right_stick_x + 32768.0f) / 65535.0f, 24.0f);
-                    draw_axis_centered((s.right_stick_y + 32768.0f) / 65535.0f, 24.0f);
+                            bool has_home = SDL_GamepadHasButton(ctrl.gamepad, SDL_GAMEPAD_BUTTON_GUIDE);
+                            bool has_misc = SDL_GamepadHasButton(ctrl.gamepad, SDL_GAMEPAD_BUTTON_MISC1);
+                            bool has_touch = SDL_GamepadHasButton(ctrl.gamepad, SDL_GAMEPAD_BUTTON_TOUCHPAD);
+                            bool has_misc2 = SDL_GamepadHasButton(ctrl.gamepad, SDL_GAMEPAD_BUTTON_MISC2);
 
-                    ImGui::NewLine();
+                            bool has_row5 = has_home || has_misc || has_touch || has_misc2;
+                            if (has_row5) {
+                                btn_layout.push_back(has_home ? ButtonMap::Home : ButtonMap::Nothing);
+                                btn_layout.push_back(has_misc ? ButtonMap::Misc1 : ButtonMap::Nothing);
+                                btn_layout.push_back(has_touch ? ButtonMap::Touchpad : ButtonMap::Nothing);
+                                btn_layout.push_back(has_misc2 ? ButtonMap::Misc2 : ButtonMap::Nothing);
+                            }
+
+                            bool has_l4 = SDL_GamepadHasButton(ctrl.gamepad, SDL_GAMEPAD_BUTTON_LEFT_PADDLE1);
+                            bool has_r4 = SDL_GamepadHasButton(ctrl.gamepad, SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1);
+                            bool has_l5 = SDL_GamepadHasButton(ctrl.gamepad, SDL_GAMEPAD_BUTTON_LEFT_PADDLE2);
+                            bool has_r5 = SDL_GamepadHasButton(ctrl.gamepad, SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2);
+
+                            bool has_row6 = has_l4 || has_r4 || has_l5 || has_r5;
+                            if (has_row6) {
+                                btn_layout.push_back(has_l4 ? ButtonMap::L4 : ButtonMap::Nothing);
+                                btn_layout.push_back(has_r4 ? ButtonMap::R4 : ButtonMap::Nothing);
+                                btn_layout.push_back(has_l5 ? ButtonMap::L5 : ButtonMap::Nothing);
+                                btn_layout.push_back(has_r5 ? ButtonMap::R5 : ButtonMap::Nothing);
+                            }
+
+                            for (ButtonMap btn : btn_layout) {
+                                if (btn == ButtonMap::L2 || btn == ButtonMap::R2) {
+                                    int trig_idx = (btn == ButtonMap::L2) ? 0 : 1;
+                                    ImGui::TableNextColumn();
+                                    DrawRightAlignedLabel(InputTriggerMapNames[trig_idx], ctrl.raw_trigs[trig_idx] / TRIGGER_MAX);
+                                    ImGui::TableNextColumn();
+                                    ImGui::SetNextItemWidth(-FLT_MIN);
+                                    DrawComboTrig("", trig_idx);
+                                } else if (btn != ButtonMap::Nothing) {
+                                    int idx = static_cast<int>(btn);
+                                    ImGui::TableNextColumn();
+                                    DrawRightAlignedLabel(GetInputButtonLabel(ctrl.gamepad, idx), ctrl.raw_btns[idx] ? 1.0f : 0.0f);
+                                    ImGui::TableNextColumn();
+                                    ImGui::SetNextItemWidth(-FLT_MIN);
+                                    DrawComboBtn(ButtonMapNames[idx], idx);
+                                } else {
+                                    ImGui::TableNextColumn();
+                                    ImGui::TableNextColumn();
+                                }
+                            }
+
+                            auto get_stick_intensity = [&](int idx) {
+                                float val = std::abs(static_cast<float>(ctrl.raw_sticks[idx]));
+                                return val > STICK_DEADZONE ? (val - STICK_DEADZONE) / (STICK_MAX - STICK_DEADZONE) : 0.0f;
+                            };
+
+                            ImGui::TableNextColumn();
+                            DrawRightAlignedLabel(StickMapNames[0], get_stick_intensity(0));
+                            ImGui::TableNextColumn();
+                            ImGui::SetNextItemWidth(-FLT_MIN);
+                            DrawComboStick(StickMapNames[0], 0);
+
+                            ImGui::TableNextColumn();
+                            DrawRightAlignedLabel(StickMapNames[1], get_stick_intensity(1));
+                            ImGui::TableNextColumn();
+                            ImGui::SetNextItemWidth(-FLT_MIN);
+                            DrawComboStick(StickMapNames[1], 1);
+
+                            ImGui::TableNextColumn();
+                            DrawRightAlignedLabel(StickMapNames[2], get_stick_intensity(2));
+                            ImGui::TableNextColumn();
+                            ImGui::SetNextItemWidth(-FLT_MIN);
+                            DrawComboStick(StickMapNames[2], 2);
+
+                            ImGui::TableNextColumn();
+                            DrawRightAlignedLabel(StickMapNames[3], get_stick_intensity(3));
+                            ImGui::TableNextColumn();
+                            ImGui::SetNextItemWidth(-FLT_MIN);
+                            DrawComboStick(StickMapNames[3], 3);
+
+                            ImGui::EndTable();
+                        }
+                        ImGui::Unindent(indent_val);
+                    }
+                    ImGui::Separator();
                 }
                 ImGui::End();
 
