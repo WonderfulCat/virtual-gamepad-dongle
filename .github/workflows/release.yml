@@ -10,14 +10,12 @@ on:
 jobs:
   dongle-build:
     uses: ./.github/workflows/dongle-build.yml
-  any2xinput-build:
-    uses: ./.github/workflows/any2xinput-build.yml
   basic_example-build:
     uses: ./.github/workflows/basic_example-build.yml
   steam_controller-build:
     uses: ./.github/workflows/steam_controller-build.yml
   create-release:
-    needs: [ dongle-build, any2xinput-build, basic_example-build, steam_controller-build ]
+    needs: [ dongle-build, basic_example-build, steam_controller-build ]
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/download-artifact@v8
