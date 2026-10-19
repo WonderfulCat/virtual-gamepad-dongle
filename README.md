@@ -36,4 +36,4 @@ Pre-built executables are included in the [latest release](https://github.com/jf
 
 Available in a separate repository:
 
-* [any2xinput](https://github.com/jfedor2/hid-router): a C++/SDL application that reads inputs from all connected controllers, merges them into one and sends them through the dongle, making them visible to apps using the XInput API. You can enable/disable individual controllers and remap buttons and axes. Rumble is optionally forwarded to the connected controllers. Can also function as the Receiver component of a [HID Forwarder](https://github.com/jfedor2/hid-forwarder) setup.
+* [any2xinput-vgd](https://github.com/jfedor2/hid-router): a C++/SDL application that reads inputs from all connected controllers, merges them into one and sends them through the dongle, making them visible to apps using the XInput API. You can enable/disable individual controllers and remap buttons and axes. Rumble is optionally forwarded to the connected controllers. Can also function as the Receiver component of a [HID Forwarder](https://github.com/jfedor2/hid-forwarder) setup.
