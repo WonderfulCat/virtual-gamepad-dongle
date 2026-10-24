@@ -19,18 +19,17 @@ LOG_MODULE_REGISTER(dongle, LOG_LEVEL_DBG);
 #define CHK(X) ({ int err = X; if (err != 0) { LOG_ERR("%s returned %d (%s:%d)", #X, err, __FILE__, __LINE__); } err == 0; })
 
 // USB
-
-#define VID 0xCAFE
-#define PID 0xBAFD
-#define BCD_DEVICE 0x0001
+#define VID 0x2DC8
+#define PID 0x3106
+#define BCD_DEVICE 0x0100
 
 const struct device* hid_dev = DEVICE_DT_GET_ONE(zephyr_hid_device);
 
 USBD_DEVICE_DEFINE(usbd_dev, DEVICE_DT_GET(DT_NODELABEL(zephyr_udc0)), VID, PID);
 
 USBD_DESC_LANG_DEFINE(desc_lang);
-USBD_DESC_MANUFACTURER_DEFINE(desc_manufacturer, "Arasaka");
-USBD_DESC_PRODUCT_DEFINE(desc_product, "Virtual Gamepad Dongle");
+USBD_DESC_MANUFACTURER_DEFINE(desc_manufacturer, "8BitDo");
+USBD_DESC_PRODUCT_DEFINE(desc_product, "8BitDo Ultimate Wireless Controller");
 USBD_DESC_SERIAL_NUMBER_DEFINE(desc_serial_number);
 USBD_CONFIGURATION_DEFINE(config_fs, 0, 50, NULL);
 
