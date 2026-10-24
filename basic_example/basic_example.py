@@ -90,7 +90,7 @@ devices = pywinusb.hid.find_all_hid_devices()
 
 dongle = None
 for d in devices:
-    if "hid#vid_cafe&pid_bafd&mi_01" in d.device_path:
+    if "hid#vid_2dc8&pid_3106&mi_01" in d.device_path:
         dongle = d
         dongle.open()
         break
